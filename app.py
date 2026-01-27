@@ -43,7 +43,7 @@ if st.button("🔍 Analisar"):
                 """
 
                 # Chama o Modelo (Sintaxe da Versão Estável)
-                model = genai.GenerativeModel('gemini-latest-version')
+                model = genai.GenerativeModel('gemini-flash-latest')
                 response = model.generate_content([prompt, image_pil])
                 
                 # Limpa JSON
@@ -83,4 +83,5 @@ if st.button("🔍 Analisar"):
 
             except Exception as e:
                 st.error(f"Erro: {e}")
+
 
