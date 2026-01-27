@@ -46,7 +46,7 @@ if st.button("🔍 Analisar Rótulo"):
                 """
 
                 # 3. Chamar IA
-                model = genai.GenerativeModel('gemini-1.5-flash')
+                model = genai.GenerativeModel('gemini-flash-latest')
                 response = model.generate_content([prompt, image_pil])
                 
                 # 4. Limpar e ler JSON
@@ -107,6 +107,7 @@ if st.button("🔍 Analisar Rótulo"):
                 st.error(f"Erro ao processar: {e}")
     else:
         st.warning("Por favor, envie a foto do rótulo primeiro.")
+
 
 
 
