@@ -39,11 +39,20 @@ if st.button("🚀 Processar Registro"):
                 img3 = Image.open(foto_bomba)
 
                 # 2. Prompt Inteligente para as 3 imagens
+                # 2. Prompt Turbo (Ajustado para ler hífens)
                 prompt = """
                 Você é um assistente de frota de ônibus. Analise estas 3 imagens em ordem:
-                1. A primeira imagem é o exterior do ônibus. Extraia o NÚMERO DO PREFIXO (ex: 1040, 2030).
-                2. A segunda imagem é o painel. Extraia o ODÔMETRO (Km total). Ignore trip ou parciais.
-                3. A terceira imagem é a bomba de combustível. Extraia a LITRAGEM abastecida e o NÚMERO DA BOMBA ou BICO.
+                
+                1. IMAGEM 1 (ÔNIBUS): Extraia o PREFIXO COMPLETO visualizado na lataria ou vidro.
+                   - ATENÇÃO: Se houver hífen, traço ou número menor ao lado, INCLUA TUDO.
+                   - Exemplo: Se estiver escrito "8707-10", retorne "8707-10" e não apenas "8707".
+                
+                2. IMAGEM 2 (PAINEL): Extraia o ODÔMETRO (Km total).
+                   - Procure pelo número maior ou indicado como "TOTAL" ou "ODO". Ignore "Trip".
+                
+                3. IMAGEM 3 (BOMBA): Extraia a LITRAGEM abastecida.
+                   - Diferencie Litros de Reais (R$). Queremos os Litros.
+                   - Tente identificar o número da bomba/bico se visível.
 
                 Retorne APENAS um JSON neste formato:
                 {
