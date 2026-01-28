@@ -4,6 +4,7 @@ from PIL import Image
 import json
 from datetime import datetime
 import pandas as pd
+import pytz # <--- Biblioteca de Fuso Horário
 
 # --- Configuração da Página ---
 st.set_page_config(page_title="Gestão de Frotas", page_icon="🚌")
@@ -18,7 +19,7 @@ except:
     st.error("⚠️ Configure a chave API nos Secrets!")
     st.stop()
 
-# --- Entrada de Fotos (AGORA SÃO 4 ABAS) ---
+# --- Entrada de Fotos ---
 tab1, tab2, tab3, tab4 = st.tabs(["📸 1. Prefixo", "📸 2. Odômetro", "📸 3. Litros", "📸 4. Nº Bomba"])
 
 with tab1:
@@ -32,7 +33,6 @@ with tab4:
 
 # --- Botão de Processamento ---
 if st.button("🚀 Processar Registro"):
-    # Verifica se as 4 fotos foram enviadas
     if foto_prefixo and foto_odo and foto_litros and foto_num_bomba:
         with st.spinner("A IA está analisando as 4 imagens..."):
             try:
@@ -42,21 +42,14 @@ if st.button("🚀 Processar Registro"):
                 img3 = Image.open(foto_litros)
                 img4 = Image.open(foto_num_bomba)
 
-                # 2. Prompt Turbo (Ajustado para 4 Imagens)
+                # 2. Prompt Turbo
                 prompt = """
                 Você é um assistente de frota de ônibus. Analise estas 4 imagens na ordem exata:
                 
-                1. IMAGEM 1 (ÔNIBUS): Extraia o PREFIXO COMPLETO.
-                   - Se houver hífen (ex: 8707-10), inclua o hífen e o final.
-                
+                1. IMAGEM 1 (ÔNIBUS): Extraia o PREFIXO COMPLETO. Se houver hífen, inclua.
                 2. IMAGEM 2 (PAINEL): Extraia o ODÔMETRO (Km total).
-                   - Ignore trip ou parciais.
-                
                 3. IMAGEM 3 (VISOR): Extraia APENAS A LITRAGEM abastecida.
-                   - Foco nos números de volume (L).
-                
                 4. IMAGEM 4 (IDENTIFICAÇÃO): Extraia o NÚMERO DA BOMBA.
-                   - Pode ser um adesivo, um número pintado ou uma placa (Ex: B-02, Bomba 5, 04).
 
                 Retorne APENAS um JSON neste formato:
                 {
@@ -67,7 +60,7 @@ if st.button("🚀 Processar Registro"):
                 }
                 """
 
-                # 3. Enviar as 4 fotos para o Gemini
+                # 3. Enviar para o Gemini
                 model = genai.GenerativeModel('gemini-flash-latest')
                 response = model.generate_content([prompt, img1, img2, img3, img4])
                 
@@ -75,15 +68,16 @@ if st.button("🚀 Processar Registro"):
                 txt = response.text.replace("```json", "").replace("```", "").strip()
                 dados = json.loads(txt)
 
-                # 5. Adicionar Data e Hora Automáticas
-                agora = datetime.now()
+                # 5. DATA E HORA BRASIL (CORREÇÃO AQUI) 🕒
+                fuso_brasil = pytz.timezone('America/Sao_Paulo')
+                agora = datetime.now(fuso_brasil)
+                
                 dados["data"] = agora.strftime("%d/%m/%Y")
                 dados["hora"] = agora.strftime("%H:%M:%S")
 
                 # --- EXIBIÇÃO ---
                 st.success("✅ Leitura Realizada!")
                 
-                # Cartões de Resumo
                 c1, c2, c3, c4 = st.columns(4)
                 c1.metric("Prefixo", dados["prefixo"])
                 c2.metric("Odômetro", f"{dados['odometro_km']} km")
@@ -91,7 +85,7 @@ if st.button("🚀 Processar Registro"):
                 c4.metric("Bomba", dados["numero_bomba"])
 
                 st.divider()
-                st.info(f"📅 Registro Automático: {dados['data']} às {dados['hora']}")
+                st.info(f"📅 Registro (Horário de Brasília): {dados['data']} às {dados['hora']}")
 
                 # --- BANCO DE DADOS (Simulação CSV) ---
                 df_novo = pd.DataFrame([dados])
@@ -107,6 +101,6 @@ if st.button("🚀 Processar Registro"):
                 )
 
             except Exception as e:
-                st.error(f"Erro na leitura: {e}. Verifique se as fotos estão nítidas.")
+                st.error(f"Erro na leitura: {e}")
     else:
-        st.warning("⚠️ Faltam fotos! Por favor, envie as 4 imagens obrigatórias.")
+        st.warning("⚠️ Faltam fotos! Por favor, envie as 4 imagens.")
