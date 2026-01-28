@@ -8,7 +8,7 @@ import pandas as pd
 # --- Configuração da Página ---
 st.set_page_config(page_title="Gestão de Frotas", page_icon="🚌")
 st.title("🚌 Controle de Abastecimento")
-st.write("Tire as fotos e deixe a IA preencher a planilha.")
+st.write("Registre as 4 fotos obrigatórias do abastecimento.")
 
 # --- Configuração da API ---
 try:
@@ -18,41 +18,45 @@ except:
     st.error("⚠️ Configure a chave API nos Secrets!")
     st.stop()
 
-# --- Entrada de Fotos (Layout em Abas para organizar) ---
-tab1, tab2, tab3 = st.tabs(["📸 1. Prefixo", "📸 2. Odômetro", "📸 3. Bomba"])
+# --- Entrada de Fotos (AGORA SÃO 4 ABAS) ---
+tab1, tab2, tab3, tab4 = st.tabs(["📸 1. Prefixo", "📸 2. Odômetro", "📸 3. Litros", "📸 4. Nº Bomba"])
 
 with tab1:
-    foto_prefixo = st.file_uploader("Foto do Ônibus (Prefixo)", type=["jpg", "png", "jpeg"], key="pref")
+    foto_prefixo = st.file_uploader("Foto do Prefixo (Lateral/Vidro)", type=["jpg", "png", "jpeg"], key="pref")
 with tab2:
-    foto_odo = st.file_uploader("Foto do Painel (Odômetro)", type=["jpg", "png", "jpeg"], key="odo")
+    foto_odo = st.file_uploader("Foto do Odômetro (Painel)", type=["jpg", "png", "jpeg"], key="odo")
 with tab3:
-    foto_bomba = st.file_uploader("Foto da Bomba (Litros/Bomba)", type=["jpg", "png", "jpeg"], key="bomb")
+    foto_litros = st.file_uploader("Foto do Visor (Apenas Litros)", type=["jpg", "png", "jpeg"], key="lit")
+with tab4:
+    foto_num_bomba = st.file_uploader("Foto do Número da Bomba (Adesivo/ID)", type=["jpg", "png", "jpeg"], key="num_bomb")
 
 # --- Botão de Processamento ---
 if st.button("🚀 Processar Registro"):
-    if foto_prefixo and foto_odo and foto_bomba:
-        with st.spinner("Analisando as 3 imagens..."):
+    # Verifica se as 4 fotos foram enviadas
+    if foto_prefixo and foto_odo and foto_litros and foto_num_bomba:
+        with st.spinner("A IA está analisando as 4 imagens..."):
             try:
                 # 1. Carregar as imagens
                 img1 = Image.open(foto_prefixo)
                 img2 = Image.open(foto_odo)
-                img3 = Image.open(foto_bomba)
+                img3 = Image.open(foto_litros)
+                img4 = Image.open(foto_num_bomba)
 
-                # 2. Prompt Inteligente para as 3 imagens
-                # 2. Prompt Turbo (Ajustado para ler hífens)
+                # 2. Prompt Turbo (Ajustado para 4 Imagens)
                 prompt = """
-                Você é um assistente de frota de ônibus. Analise estas 3 imagens em ordem:
+                Você é um assistente de frota de ônibus. Analise estas 4 imagens na ordem exata:
                 
-                1. IMAGEM 1 (ÔNIBUS): Extraia o PREFIXO COMPLETO visualizado na lataria ou vidro.
-                   - ATENÇÃO: Se houver hífen, traço ou número menor ao lado, INCLUA TUDO.
-                   - Exemplo: Se estiver escrito "8707-10", retorne "8707-10" e não apenas "8707".
+                1. IMAGEM 1 (ÔNIBUS): Extraia o PREFIXO COMPLETO.
+                   - Se houver hífen (ex: 8707-10), inclua o hífen e o final.
                 
                 2. IMAGEM 2 (PAINEL): Extraia o ODÔMETRO (Km total).
-                   - Procure pelo número maior ou indicado como "TOTAL" ou "ODO". Ignore "Trip".
+                   - Ignore trip ou parciais.
                 
-                3. IMAGEM 3 (BOMBA): Extraia a LITRAGEM abastecida.
-                   - Diferencie Litros de Reais (R$). Queremos os Litros.
-                   - Tente identificar o número da bomba/bico se visível.
+                3. IMAGEM 3 (VISOR): Extraia APENAS A LITRAGEM abastecida.
+                   - Foco nos números de volume (L).
+                
+                4. IMAGEM 4 (IDENTIFICAÇÃO): Extraia o NÚMERO DA BOMBA.
+                   - Pode ser um adesivo, um número pintado ou uma placa (Ex: B-02, Bomba 5, 04).
 
                 Retorne APENAS um JSON neste formato:
                 {
@@ -63,9 +67,9 @@ if st.button("🚀 Processar Registro"):
                 }
                 """
 
-                # 3. Enviar tudo junto para o Gemini
+                # 3. Enviar as 4 fotos para o Gemini
                 model = genai.GenerativeModel('gemini-flash-latest')
-                response = model.generate_content([prompt, img1, img2, img3])
+                response = model.generate_content([prompt, img1, img2, img3, img4])
                 
                 # 4. Limpeza
                 txt = response.text.replace("```json", "").replace("```", "").strip()
@@ -90,21 +94,19 @@ if st.button("🚀 Processar Registro"):
                 st.info(f"📅 Registro Automático: {dados['data']} às {dados['hora']}")
 
                 # --- BANCO DE DADOS (Simulação CSV) ---
-                # Aqui criamos uma linha de tabela para você baixar
                 df_novo = pd.DataFrame([dados])
-                st.write("### Conferência dos Dados:")
+                st.write("### Conferência:")
                 st.dataframe(df_novo)
                 
-                # Botão para salvar localmente (MVP)
                 csv = df_novo.to_csv(index=False).encode('utf-8')
                 st.download_button(
                     "📥 Baixar Registro (CSV)",
                     csv,
-                    f"registro_{dados['prefixo']}.csv",
+                    f"abastecimento_{dados['prefixo']}.csv",
                     "text/csv"
                 )
 
             except Exception as e:
-                st.error(f"Erro na leitura: {e}. Tente tirar fotos mais claras.")
+                st.error(f"Erro na leitura: {e}. Verifique se as fotos estão nítidas.")
     else:
-        st.warning("⚠️ Por favor, envie as 3 fotos para processar.")
+        st.warning("⚠️ Faltam fotos! Por favor, envie as 4 imagens obrigatórias.")
